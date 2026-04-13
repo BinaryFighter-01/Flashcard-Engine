@@ -1,0 +1,603 @@
+'use client';
+
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/app/lib/supabase-client';
+import PDFParser from 'pdf-parse';
+import * as pdfjs from 'pdfjs-dist';
+
+interface GeneratedCard {
+     id: string;
+     front: string;
+     back: string;
+     hint: string;
+     card_type: 'concept' | 'definition' | 'example' | 'relationship';
+     difficulty_level: number;
+     tags: string[];
+     created_at: string;
+}
+
+export default function UploadPage() {
+     const [isDragging, setIsDragging] = useState(false);
+     const [file, setFile] = useState<File | null>(null);
+     const [deckTitle, setDeckTitle] = useState('');
+     const [deckDescription, setDeckDescription] = useState('');
+     const [loading, setLoading] = useState(false);
+     const [generating, setGenerating] = useState(false);
+     const [generationProgress, setGenerationProgress] = useState(0);
+     const [generationStatus, setGenerationStatus] = useState('');
+     const [cards, setCards] = useState<GeneratedCard[]>([]);
+     const [editingCardIndex, setEditingCardIndex] = useState<number | null>(null);
+     const [error, setError] = useState('');
+     const [success, setSuccess] = useState('');
+     const router = useRouter();
+     const supabase = createClient();
+     const dragRef = useRef<HTMLDivElement>(null);
+
+     // Check if user is logged in
+     const [user, setUser] = useState<any>(null);
+     const [userLoading, setUserLoading] = useState(true);
+
+     useEffect(() => {
+          let isMounted = true;
+
+          const checkUser = async () => {
+               try {
+                    const {
+                         data: { user },
+                    } = await supabase.auth.getUser();
+                    if (isMounted) {
+                         if (!user) {
+                              router.push('/auth/login');
+                              return;
+                         }
+                         setUser(user);
+                    }
+               } catch (err) {
+                    if (isMounted) {
+                         router.push('/auth/login');
+                    }
+               } finally {
+                    if (isMounted) {
+                         setUserLoading(false);
+                    }
+               }
+          };
+          checkUser();
+
+          return () => {
+               isMounted = false;
+          };
+     }, []);
+
+     const handleDragOver = useCallback((e: React.DragEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(true);
+     }, []);
+
+     const handleDragLeave = useCallback((e: React.DragEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+     }, []);
+
+     const handleDrop = useCallback((e: React.DragEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+
+          const droppedFiles = e.dataTransfer.files;
+          if (droppedFiles.length > 0) {
+               const pdfFile = droppedFiles[0];
+               if (pdfFile.type === 'application/pdf') {
+                    setFile(pdfFile);
+                    setError('');
+               } else {
+                    setError('Please upload a PDF file');
+               }
+          }
+     }, []);
+
+     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+          if (e.target.files && e.target.files[0]) {
+               const pdfFile = e.target.files[0];
+               if (pdfFile.type === 'application/pdf') {
+                    setFile(pdfFile);
+                    setError('');
+               } else {
+                    setError('Please upload a PDF file');
+               }
+          }
+     };
+
+     const extractTextFromPDF = async (pdfFile: File): Promise<string> => {
+          return new Promise((resolve, reject) => {
+               const reader = new FileReader();
+
+               reader.onload = async (e) => {
+                    try {
+                         // Set up worker right before using PDF.js
+                         if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
+                              const workerUrl = '/pdf.worker.min.js';
+                              pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+                         }
+
+                         const arrayBuffer = e.target?.result as ArrayBuffer;
+
+                         // Try to load PDF with error handling for worker issues
+                         try {
+                              const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+
+                              let fullText = '';
+                              for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                                   try {
+                                        const page = await pdf.getPage(pageNum);
+                                        const textContent = await page.getTextContent();
+                                        const pageText = textContent.items
+                                             .map((item: any) => item.str)
+                                             .join(' ');
+                                        fullText += pageText + '\n\n';
+                                   } catch (pageErr) {
+                                        console.warn(`Error extracting page ${pageNum}:`, pageErr);
+                                        fullText += `[Page ${pageNum} extraction failed]\n\n`;
+                                   }
+                              }
+
+                              if (!fullText.trim()) {
+                                   reject(new Error('PDF appears to be empty or contains no extractable text'));
+                                   return;
+                              }
+
+                              resolve(fullText);
+                         } catch (workerErr: any) {
+                              console.error('PDF worker error:', workerErr);
+                              reject(new Error('PDF extraction failed. Make sure PDF contains readable text.'));
+                         }
+                    } catch (err) {
+                         reject(err);
+                    }
+               };
+
+               reader.onerror = () => {
+                    reject(new Error('Failed to read PDF file'));
+               };
+
+               reader.readAsArrayBuffer(pdfFile);
+          });
+     };
+
+     const handleGenerateCards = async () => {
+          if (!file || !deckTitle.trim()) {
+               setError('Please select a PDF and enter a deck title');
+               return;
+          }
+
+          setLoading(true);
+          setGenerating(true);
+          setError('');
+          setGenerationProgress(0);
+          setGenerationStatus('Extracting text from PDF...');
+
+          try {
+               // Extract text from PDF
+               setGenerationProgress(10);
+               setGenerationStatus('Extracting text from PDF...');
+               const pdfText = await extractTextFromPDF(file);
+
+               if (!pdfText.trim()) {
+                    setError('Could not extract text from PDF. Make sure it contains readable text.');
+                    setGenerating(false);
+                    setLoading(false);
+                    return;
+               }
+
+               // Generate cards via API
+               setGenerationProgress(30);
+               setGenerationStatus('Sending to AI for card generation...');
+
+               const response = await fetch('/api/generate-cards', {
+                    method: 'POST',
+                    headers: {
+                         'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                         pdfText,
+                         deckTitle,
+                    }),
+               });
+
+               if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to generate cards');
+               }
+
+               const data = await response.json();
+               setGenerationProgress(90);
+               setGenerationStatus(`Generated ${data.count} cards!`);
+
+               setCards(data.cards);
+               setTimeout(() => {
+                    setGenerationProgress(100);
+                    setGenerating(false);
+               }, 500);
+          } catch (err: any) {
+               setError(err.message || 'Failed to generate cards');
+               setGenerating(false);
+          } finally {
+               setLoading(false);
+          }
+     };
+
+     const handleEditCard = (index: number, field: string, value: any) => {
+          const updatedCards = [...cards];
+          updatedCards[index] = {
+               ...updatedCards[index],
+               [field]: value,
+          };
+          setCards(updatedCards);
+     };
+
+     const handleRemoveCard = (index: number) => {
+          setCards(cards.filter((_, i) => i !== index));
+     };
+
+     const handleSaveDeck = async () => {
+          if (!deckTitle.trim() || cards.length === 0) {
+               setError('Please generate cards before saving');
+               return;
+          }
+
+          setLoading(true);
+          setError('');
+
+          try {
+               const {
+                    data: { user },
+               } = await supabase.auth.getUser();
+
+               if (!user) {
+                    setError('You must be logged in to save decks');
+                    return;
+               }
+
+               // Create deck
+               const { data: deckData, error: deckError } = await supabase
+                    .from('decks')
+                    .insert({
+                         user_id: user.id,
+                         title: deckTitle,
+                         description: deckDescription,
+                         source_filename: file?.name,
+                         card_count: cards.length,
+                         color_tag: 'blue',
+                    })
+                    .select()
+                    .single();
+
+               if (deckError) throw deckError;
+
+               // Create cards
+               const cardsToInsert = cards.map((card) => ({
+                    deck_id: deckData.id,
+                    front: card.front,
+                    back: card.back,
+                    hint: card.hint,
+                    card_type: card.card_type,
+                    difficulty_level: card.difficulty_level,
+                    tags: card.tags,
+               }));
+
+               const { error: cardsError } = await supabase
+                    .from('cards')
+                    .insert(cardsToInsert);
+
+               if (cardsError) throw cardsError;
+
+               setSuccess(`Deck "${deckTitle}" saved with ${cards.length} cards!`);
+               setTimeout(() => {
+                    router.push(`/deck/${deckData.id}`);
+               }, 1500);
+          } catch (err: any) {
+               setError(err.message || 'Failed to save deck');
+          } finally {
+               setLoading(false);
+          }
+     };
+
+     if (userLoading) {
+          return (
+               <div className="flex items-center justify-center min-h-screen">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-amber"></div>
+               </div>
+          );
+     }
+
+     return (
+          <div className="min-h-screen bg-dark-bg">
+               {/* Header */}
+               <header className="border-b border-dark-border sticky top-0 bg-dark-bg/95 backdrop-blur">
+                    <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+                         <Link href="/dashboard" className="text-2xl font-bold text-gradient">
+                              RecallAI
+                         </Link>
+                         <Link href="/dashboard" className="btn-secondary text-sm">
+                              Back to Dashboard
+                         </Link>
+                    </div>
+               </header>
+
+               {/* Main Content */}
+               <main className="max-w-4xl mx-auto px-4 py-12">
+                    {cards.length === 0 ? (
+                         <div className="space-y-8">
+                              {/* Step 1: Upload PDF */}
+                              <div className="card-container">
+                                   <h2 className="text-2xl font-bold mb-6">Step 1: Upload PDF</h2>
+
+                                   <div
+                                        ref={dragRef}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`border-2 border-dashed rounded-lg p-12 text-center transition-all cursor-pointer ${isDragging
+                                             ? 'border-accent-amber bg-accent-amber/5'
+                                             : 'border-dark-border hover:border-accent-amber/50'
+                                             }`}
+                                   >
+                                        <div className="text-5xl mb-4">📄</div>
+                                        <h3 className="text-xl font-semibold mb-2">
+                                             Drag & drop your PDF here
+                                        </h3>
+                                        <p className="text-gray-400 mb-4">or click to select a file</p>
+                                        <input
+                                             type="file"
+                                             accept=".pdf"
+                                             onChange={handleFileSelect}
+                                             className="absolute opacity-0"
+                                             id="pdf-input"
+                                        />
+                                        <label htmlFor="pdf-input" className="btn-primary cursor-pointer">
+                                             Choose PDF
+                                        </label>
+                                   </div>
+
+                                   {file && (
+                                        <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                                             <p className="text-green-400">✓ File selected: {file.name}</p>
+                                        </div>
+                                   )}
+                              </div>
+
+                              {/* Step 2: Deck Details */}
+                              <div className="card-container">
+                                   <h2 className="text-2xl font-bold mb-6">Step 2: Deck Details</h2>
+
+                                   <div className="space-y-4">
+                                        <div>
+                                             <label className="block text-sm font-medium mb-2">
+                                                  Deck Title *
+                                             </label>
+                                             <input
+                                                  type="text"
+                                                  value={deckTitle}
+                                                  onChange={(e) => setDeckTitle(e.target.value)}
+                                                  placeholder="e.g., Biology 101, Spanish Vocab"
+                                                  className="input-primary"
+                                             />
+                                        </div>
+
+                                        <div>
+                                             <label className="block text-sm font-medium mb-2">
+                                                  Description (optional)
+                                             </label>
+                                             <textarea
+                                                  value={deckDescription}
+                                                  onChange={(e) => setDeckDescription(e.target.value)}
+                                                  placeholder="Add a description for your deck..."
+                                                  rows={3}
+                                                  className="input-primary"
+                                             />
+                                        </div>
+                                   </div>
+                              </div>
+
+                              {/* Error Display */}
+                              {error && (
+                                   <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-300">
+                                        {error}
+                                   </div>
+                              )}
+
+                              {/* Generate Button */}
+                              <button
+                                   onClick={handleGenerateCards}
+                                   disabled={!file || !deckTitle.trim() || loading}
+                                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-lg py-3"
+                              >
+                                   {loading ? 'Generating...' : 'Generate Flashcards'}
+                              </button>
+
+                              {/* Generation Progress */}
+                              {generating && (
+                                   <div className="card-container">
+                                        <p className="text-sm text-gray-400 mb-3">{generationStatus}</p>
+                                        <div className="w-full bg-dark-border rounded-full h-2 overflow-hidden">
+                                             <div
+                                                  className="bg-gradient-to-r from-accent-amber to-accent-indigo h-full transition-all duration-300"
+                                                  style={{ width: `${generationProgress}%` }}
+                                             ></div>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-3">{generationProgress}%</p>
+                                   </div>
+                              )}
+                         </div>
+                    ) : (
+                         <div className="space-y-8">
+                              {/* Card Preview & Editing */}
+                              <div className="card-container">
+                                   <div className="flex items-center justify-between mb-6">
+                                        <h2 className="text-2xl font-bold">
+                                             Generated Cards ({cards.length})
+                                        </h2>
+                                        <button
+                                             onClick={() => setCards([])}
+                                             className="btn-secondary text-sm"
+                                        >
+                                             ← Start Over
+                                        </button>
+                                   </div>
+
+                                   <div className="space-y-4 max-h-96 overflow-y-auto">
+                                        {cards.map((card, index) => (
+                                             <div
+                                                  key={index}
+                                                  className="border border-dark-border rounded-lg p-4 hover:border-accent-amber/50 transition-all"
+                                             >
+                                                  <div className="flex items-start justify-between mb-3">
+                                                       <span className="text-xs font-semibold text-accent-amber">
+                                                            Card {index + 1}
+                                                       </span>
+                                                       <button
+                                                            onClick={() => handleRemoveCard(index)}
+                                                            className="text-red-400 hover:text-red-300 text-sm"
+                                                       >
+                                                            Delete
+                                                       </button>
+                                                  </div>
+
+                                                  {editingCardIndex === index ? (
+                                                       <div className="space-y-3">
+                                                            <div>
+                                                                 <label className="text-xs text-gray-400 block mb-1">
+                                                                      Front (Question)
+                                                                 </label>
+                                                                 <textarea
+                                                                      value={card.front}
+                                                                      onChange={(e) =>
+                                                                           handleEditCard(index, 'front', e.target.value)
+                                                                      }
+                                                                      rows={2}
+                                                                      className="input-primary text-sm"
+                                                                 />
+                                                            </div>
+                                                            <div>
+                                                                 <label className="text-xs text-gray-400 block mb-1">
+                                                                      Back (Answer)
+                                                                 </label>
+                                                                 <textarea
+                                                                      value={card.back}
+                                                                      onChange={(e) =>
+                                                                           handleEditCard(index, 'back', e.target.value)
+                                                                      }
+                                                                      rows={2}
+                                                                      className="input-primary text-sm"
+                                                                 />
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                 <div>
+                                                                      <label className="text-xs text-gray-400 block mb-1">
+                                                                           Type
+                                                                      </label>
+                                                                      <select
+                                                                           value={card.card_type}
+                                                                           onChange={(e) =>
+                                                                                handleEditCard(index, 'card_type', e.target.value)
+                                                                           }
+                                                                           className="input-primary text-sm"
+                                                                      >
+                                                                           <option value="concept">Concept</option>
+                                                                           <option value="definition">Definition</option>
+                                                                           <option value="example">Example</option>
+                                                                           <option value="relationship">Relationship</option>
+                                                                      </select>
+                                                                 </div>
+                                                                 <div>
+                                                                      <label className="text-xs text-gray-400 block mb-1">
+                                                                           Difficulty (1-5)
+                                                                      </label>
+                                                                      <input
+                                                                           type="number"
+                                                                           min="1"
+                                                                           max="5"
+                                                                           value={card.difficulty_level}
+                                                                           onChange={(e) =>
+                                                                                handleEditCard(
+                                                                                     index,
+                                                                                     'difficulty_level',
+                                                                                     parseInt(e.target.value)
+                                                                                )
+                                                                           }
+                                                                           className="input-primary text-sm"
+                                                                      />
+                                                                 </div>
+                                                            </div>
+                                                            <button
+                                                                 onClick={() => setEditingCardIndex(null)}
+                                                                 className="btn-secondary text-sm w-full"
+                                                            >
+                                                                 Done Editing
+                                                            </button>
+                                                       </div>
+                                                  ) : (
+                                                       <>
+                                                            <p className="font-semibold mb-2">{card.front}</p>
+                                                            <p className="text-gray-300 text-sm mb-3">{card.back}</p>
+                                                            <div className="flex gap-2 flex-wrap text-xs mb-3">
+                                                                 <span className="bg-accent-indigo/20 text-accent-indigo px-2 py-1 rounded">
+                                                                      {card.card_type}
+                                                                 </span>
+                                                                 <span className="bg-accent-amber/20 text-accent-amber px-2 py-1 rounded">
+                                                                      Lvl {card.difficulty_level}
+                                                                 </span>
+                                                                 {card.tags.map((tag) => (
+                                                                      <span
+                                                                           key={tag}
+                                                                           className="bg-dark-border px-2 py-1 rounded"
+                                                                      >
+                                                                           {tag}
+                                                                      </span>
+                                                                 ))}
+                                                            </div>
+                                                            <button
+                                                                 onClick={() => setEditingCardIndex(index)}
+                                                                 className="btn-ghost text-sm"
+                                                            >
+                                                                 Edit Card
+                                                            </button>
+                                                       </>
+                                                  )}
+                                             </div>
+                                        ))}
+                                   </div>
+                              </div>
+
+                              {/* Success Message */}
+                              {success && (
+                                   <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4 text-green-300">
+                                        ✓ {success}
+                                   </div>
+                              )}
+
+                              {/* Error Display */}
+                              {error && (
+                                   <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-300">
+                                        {error}
+                                   </div>
+                              )}
+
+                              {/* Save Button */}
+                              <button
+                                   onClick={handleSaveDeck}
+                                   disabled={loading}
+                                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-lg py-3"
+                              >
+                                   {loading ? 'Saving Deck...' : `Save Deck with ${cards.length} Cards`}
+                              </button>
+                         </div>
+                    )}
+               </main>
+          </div>
+     );
+}
