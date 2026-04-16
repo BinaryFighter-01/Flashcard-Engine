@@ -70,7 +70,7 @@ export default function Dashboard() {
                               <p className="text-sm text-gray-400 font-medium">Total Decks</p>
                               <div className="mt-3 h-1 w-12 bg-gradient-to-r from-accent-amber to-yellow-400 rounded-full"></div>
                          </div>
-                         
+
                          <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
                               <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent-indigo to-blue-400 mb-2">
                                    0
@@ -78,7 +78,7 @@ export default function Dashboard() {
                               <p className="text-sm text-gray-400 font-medium">Due Today</p>
                               <div className="mt-3 h-1 w-12 bg-gradient-to-r from-accent-indigo to-blue-400 rounded-full"></div>
                          </div>
-                         
+
                          <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
                               <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-pink-400 mb-2">
                                    0
@@ -86,7 +86,7 @@ export default function Dashboard() {
                               <p className="text-sm text-gray-400 font-medium">Study Streak</p>
                               <div className="mt-3 h-1 w-12 bg-gradient-to-r from-rose-400 to-pink-400 rounded-full"></div>
                          </div>
-                         
+
                          <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
                               <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-400 mb-2">
                                    0%
