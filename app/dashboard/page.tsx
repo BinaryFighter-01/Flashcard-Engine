@@ -1,36 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/app/lib/supabase-client';
 
 export default function Dashboard() {
-     const [user, setUser] = useState<any>(null);
      const [loading, setLoading] = useState(true);
      const [decks, setDecks] = useState<any[]>([]);
-     const router = useRouter();
      const supabase = createClient();
 
      useEffect(() => {
-          const checkUser = async () => {
+          const fetchDecks = async () => {
                try {
-                    const {
-                         data: { user },
-                    } = await supabase.auth.getUser();
-
-                    if (!user) {
-                         router.push('/auth/login');
-                         return;
-                    }
-
-                    setUser(user);
-
-                    // Fetch user's decks
+                    // Fetch all decks (no user filter)
                     const { data, error } = await supabase
                          .from('decks')
                          .select('*')
-                         .eq('user_id', user.id)
                          .order('created_at', { ascending: false });
 
                     if (!error && data) {
@@ -38,19 +23,13 @@ export default function Dashboard() {
                     }
                } catch (error) {
                     console.error('Error:', error);
-                    router.push('/auth/login');
                } finally {
                     setLoading(false);
                }
           };
 
-          checkUser();
+          fetchDecks();
      }, []);
-
-     const handleSignOut = async () => {
-          await supabase.auth.signOut();
-          router.push('/');
-     };
 
      if (loading) {
           return (
@@ -69,16 +48,12 @@ export default function Dashboard() {
                               <div className="text-3xl">✨</div>
                               <div>
                                    <h1 className="text-2xl font-bold text-gradient">RecallAI</h1>
-                                   <p className="text-xs text-gray-400">{user?.email}</p>
                               </div>
                          </div>
                          <div className="flex gap-3 items-center">
                               <Link href="/upload" className="btn-primary text-sm">
                                    + Create Deck
                               </Link>
-                              <button onClick={handleSignOut} className="btn-secondary text-sm">
-                                   Sign Out
-                              </button>
                          </div>
                     </div>
                </header>

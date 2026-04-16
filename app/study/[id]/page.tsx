@@ -44,15 +44,6 @@ export default function StudyPage() {
      useEffect(() => {
           const loadCards = async () => {
                try {
-                    const {
-                         data: { user: currentUser },
-                    } = await supabase.auth.getUser();
-
-                    if (!currentUser) {
-                         router.push('/auth/login');
-                         return;
-                    }
-
                     // Fetch all cards for this deck
                     const { data: cardsData, error: cardsError } = await supabase
                          .from('cards')
@@ -69,7 +60,6 @@ export default function StudyPage() {
                                         .from('card_progress')
                                         .select('*')
                                         .eq('card_id', card.id)
-                                        .eq('user_id', currentUser.id)
                                         .single();
 
                                    return {

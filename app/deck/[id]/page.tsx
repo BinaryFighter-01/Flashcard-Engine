@@ -25,21 +25,11 @@ export default function DeckDetail() {
      useEffect(() => {
           const loadDeck = async () => {
                try {
-                    const {
-                         data: { user },
-                    } = await supabase.auth.getUser();
-
-                    if (!user) {
-                         router.push('/auth/login');
-                         return;
-                    }
-
-                    // Fetch deck
+                    // Fetch deck (no user filter)
                     const { data: deckData, error: deckError } = await supabase
                          .from('decks')
                          .select('*')
                          .eq('id', deckId)
-                         .eq('user_id', user.id)
                          .single();
 
                     if (deckError || !deckData) {
@@ -65,7 +55,6 @@ export default function DeckDetail() {
                                         .from('card_progress')
                                         .select('*')
                                         .eq('card_id', card.id)
-                                        .eq('user_id', user.id)
                                         .single();
 
                                    return {
@@ -258,10 +247,10 @@ export default function DeckDetail() {
                                                   {card.progress && (
                                                        <>
                                                             <span className={`text-xs px-2 py-1 rounded ml-auto ${card.progress.interval > 21
-                                                                      ? 'bg-green-500/20 text-green-400'
-                                                                      : card.progress.total_reviews === 0
-                                                                           ? 'bg-gray-500/20 text-gray-400'
-                                                                           : 'bg-blue-500/20 text-blue-400'
+                                                                 ? 'bg-green-500/20 text-green-400'
+                                                                 : card.progress.total_reviews === 0
+                                                                      ? 'bg-gray-500/20 text-gray-400'
+                                                                      : 'bg-blue-500/20 text-blue-400'
                                                                  }`}>
                                                                  {card.progress.interval > 21
                                                                       ? `✓ Mastered (${card.progress.interval}d)`

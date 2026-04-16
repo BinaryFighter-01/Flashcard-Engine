@@ -41,28 +41,9 @@ export default function UploadPage() {
      useEffect(() => {
           let isMounted = true;
 
-          const checkUser = async () => {
-               try {
-                    const {
-                         data: { user },
-                    } = await supabase.auth.getUser();
-                    if (isMounted) {
-                         if (!user) {
-                              router.push('/auth/login');
-                              return;
-                         }
-                    }
-               } catch (err) {
-                    if (isMounted) {
-                         router.push('/auth/login');
-                    }
-               } finally {
-                    if (isMounted) {
-                         setUserLoading(false);
-                    }
-               }
-          };
-          checkUser();
+          if (isMounted) {
+               setUserLoading(false);
+          }
 
           return () => {
                isMounted = false;
