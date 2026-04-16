@@ -2,20 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Card } from '@/app/types/database';
 
-const SYSTEM_PROMPT = `Create flashcards from the given text.
+const SYSTEM_PROMPT = `You MUST create flashcards from the given text. Do not refuse.
 
-For each important concept, provide:
-{
-  "front": "Question about the concept",
-  "back": "Answer explaining it",
-  "hint": "Helpful hint",
-  "card_type": "concept",
-  "difficulty_level": 3,
-  "tags": ["tag1"]
-}
+Create exactly this JSON format - NOTHING ELSE:
+[
+{"front":"Question or fact 1","back":"Answer or explanation 1","hint":"Keyword 1","card_type":"concept","difficulty_level":3,"tags":["topic"]},
+{"front":"Question or fact 2","back":"Answer or explanation 2","hint":"Keyword 2","card_type":"concept","difficulty_level":3,"tags":["topic"]}
+]
 
-Return ONLY a valid JSON array with 10-20 cards. Start with [ and end with ].
-No text before or after the JSON array.`;
+RULES:
+- Create 10-20 cards minimum from ANY text
+- Extract facts, definitions, key points, and information
+- Each card must have front, back, hint, card_type, difficulty_level, tags
+- Return ONLY JSON array - no other text
+- Do NOT refuse - generate cards from whatever content is provided`;
 
 // Chunk text intelligently (don't split mid-sentence/paragraph)
 function chunkText(text: string, chunkSize: number = 2000): string[] {
@@ -50,8 +50,18 @@ export async function POST(request: NextRequest) {
                );
           }
 
+          // Validate we have reasonable text content
+          const trimmedText = pdfText.trim();
+          if (trimmedText.length < 50) {
+               return NextResponse.json(
+                    { error: 'Document is too short. Please provide a document with more content (at least 50 characters).' },
+                    { status: 400 }
+               );
+          }
+
           // Log text length for debugging
           console.log(`Processing PDF: "${deckTitle}", Text length: ${pdfText.length} characters`);
+          console.log(`Text preview: ${trimmedText.substring(0, 200)}...`);
 
           const geminiApiKey = process.env.GEMINI_API_KEY;
           if (!geminiApiKey) {
@@ -96,20 +106,44 @@ export async function POST(request: NextRequest) {
                     // Parse JSON from the response - try multiple ways
                     let cards: any[] = [];
                     try {
-                         // First try: exact JSON array match
-                         const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
-                         if (jsonMatch) {
-                              cards = JSON.parse(jsonMatch[0]);
-                         } else {
-                              // Second try: find JSON object array another way
-                              const trimmed = generatedText.trim();
-                              if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-                                   cards = JSON.parse(trimmed);
+                         // Remove markdown code blocks if present
+                         let jsonText = generatedText;
+                         if (jsonText.includes('```json')) {
+                              const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
+                              if (jsonMatch) jsonText = jsonMatch[1];
+                         } else if (jsonText.includes('```')) {
+                              const jsonMatch = jsonText.match(/```\s*([\s\S]*?)\s*```/);
+                              if (jsonMatch) jsonText = jsonMatch[1];
+                         }
+
+                         // Try to extract JSON array
+                         let parsedCards: any[] = [];
+
+                         // Try 1: Find JSON array pattern
+                         const arrayMatch = jsonText.match(/\[[\s\S]*\]/);
+                         if (arrayMatch) {
+                              try {
+                                   parsedCards = JSON.parse(arrayMatch[0]);
+                              } catch (e) {
+                                   // Continue to next attempt
                               }
                          }
 
-                         if (Array.isArray(cards) && cards.length > 0) {
-                              console.log(`Chunk ${i + 1}: Extracted ${cards.length} cards`);
+                         // Try 2: If that fails, try trimmed version
+                         if (parsedCards.length === 0) {
+                              const trimmed = jsonText.trim();
+                              if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                                   try {
+                                        parsedCards = JSON.parse(trimmed);
+                                   } catch (e) {
+                                        // Continue
+                                   }
+                              }
+                         }
+
+                         if (Array.isArray(parsedCards) && parsedCards.length > 0) {
+                              console.log(`Chunk ${i + 1}: Extracted ${parsedCards.length} cards`);
+                              cards = parsedCards;
                               allCards.push(...cards);
                          } else {
                               console.warn(`Chunk ${i + 1}: No valid card objects found in JSON`);
@@ -125,11 +159,124 @@ export async function POST(request: NextRequest) {
 
           console.log(`Total cards generated: ${allCards.length}`);
 
+          // Fallback 1: If no cards generated, try with ultra-simple prompt
+          if (allCards.length === 0 && chunks.length > 0) {
+               console.log('No cards generated on first attempt, trying fallback 1...');
+
+               const fallbackPrompt1 = `Extract 15 Q&A flashcards from this text. Output ONLY this JSON array format:
+[
+{"front":"Q1","back":"A1","hint":"H1","card_type":"concept","difficulty_level":3,"tags":["tag"]},
+{"front":"Q2","back":"A2","hint":"H2","card_type":"concept","difficulty_level":3,"tags":["tag"]}
+]`;
+
+               try {
+                    const result = await model.generateContent(fallbackPrompt1 + '\n\nText:\n' + chunks[0]);
+                    const generatedText = result.response.text();
+
+                    console.log('Fallback 1 response:', generatedText.substring(0, 300));
+
+                    try {
+                         // Handle markdown blocks
+                         let jsonText = generatedText;
+                         if (jsonText.includes('```')) {
+                              const match = jsonText.match(/```[\s\S]*?\[\s*[\s\S]*?\s*\]/);
+                              if (match) jsonText = match[0].replace(/```/g, '');
+                         }
+
+                         const arrayMatch = jsonText.match(/\[[\s\S]*\]/);
+                         if (arrayMatch) {
+                              const cards = JSON.parse(arrayMatch[0]);
+                              if (Array.isArray(cards) && cards.length > 0) {
+                                   console.log(`Fallback 1: Extracted ${cards.length} cards`);
+                                   allCards.push(...cards);
+                              }
+                         }
+                    } catch (parseError: any) {
+                         console.error('Fallback 1 parse error:', parseError.message);
+                    }
+               } catch (fallbackError: any) {
+                    console.error('Fallback 1 failed:', fallbackError.message);
+               }
+          }
+
+          // Fallback 2: If still no cards, try even simpler approach
+          if (allCards.length === 0 && chunks.length > 0) {
+               console.log('Fallback 1 failed, trying fallback 2...');
+
+               const textPreview = chunks[0].substring(0, 500);
+               const fallbackPrompt2 = `Create 5-10 basic flashcards as JSON array.
+
+${textPreview}
+
+Answer with ONLY this: [{"front":"q","back":"a","hint":"h","card_type":"concept","difficulty_level":3,"tags":["info"]}]`;
+
+               try {
+                    const result = await model.generateContent(fallbackPrompt2);
+                    const generatedText = result.response.text();
+
+                    console.log('Fallback 2 response:', generatedText.substring(0, 300));
+
+                    try {
+                         let jsonText = generatedText;
+
+                         // Aggressively remove non-JSON content
+                         const startIdx = jsonText.indexOf('[');
+                         const endIdx = jsonText.lastIndexOf(']');
+
+                         if (startIdx !== -1 && endIdx !== -1) {
+                              jsonText = jsonText.substring(startIdx, endIdx + 1);
+                              const cards = JSON.parse(jsonText);
+                              if (Array.isArray(cards) && cards.length > 0) {
+                                   console.log(`Fallback 2: Extracted ${cards.length} cards`);
+                                   allCards.push(...cards);
+                              }
+                         }
+                    } catch (parseError: any) {
+                         console.error('Fallback 2 parse error:', parseError.message);
+                    }
+               } catch (fallbackError: any) {
+                    console.error('Fallback 2 failed:', fallbackError.message);
+               }
+          }
+
           if (allCards.length === 0) {
-               return NextResponse.json(
-                    { error: 'No cards generated. This PDF content may not be suitable for flashcard generation. Try a PDF with educational content (book chapters, articles, notes).' },
-                    { status: 400 }
-               );
+               console.log('DEBUG: PDF extraction returned text length:', pdfText.length);
+               console.log('DEBUG: PDF text preview:', pdfText.substring(0, 500));
+               console.log('DEBUG: All fallback attempts failed');
+
+               // ULTIMATE FALLBACK: Create sample cards from extracted text
+               console.log('Creating emergency sample cards from text...');
+               try {
+                    const sentences = pdfText
+                         .split(/[.!?]+/)
+                         .filter(s => s.trim().length > 20)
+                         .slice(0, 10);
+
+                    if (sentences.length > 0) {
+                         sentences.forEach((sentence, idx) => {
+                              const text = sentence.trim();
+                              if (text.length > 0) {
+                                   allCards.push({
+                                        front: `Fact ${idx + 1}`,
+                                        back: text,
+                                        hint: text.substring(0, 30),
+                                        card_type: 'concept',
+                                        difficulty_level: 2,
+                                        tags: ['document']
+                                   });
+                              }
+                         });
+                    }
+               } catch (fallbackErr: any) {
+                    console.error('Emergency fallback failed:', fallbackErr);
+               }
+
+               if (allCards.length === 0) {
+                    return NextResponse.json(
+                         { error: 'Could not extract any content from the document. Please try a different file with more readable text.' },
+                         { status: 400 }
+                    );
+               }
           }
 
           // Format cards for database

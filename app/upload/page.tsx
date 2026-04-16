@@ -38,6 +38,7 @@ export default function UploadPage() {
      // Check if user is logged in
      const [user, setUser] = useState<any>(null);
      const [userLoading, setUserLoading] = useState(true);
+     const fileInputRef = useRef<HTMLInputElement>(null);
 
      useEffect(() => {
           let isMounted = true;
@@ -69,7 +70,7 @@ export default function UploadPage() {
           return () => {
                isMounted = false;
           };
-     }, []);
+     }, [router, supabase]);
 
      const handleDragOver = useCallback((e: React.DragEvent) => {
           e.preventDefault();
@@ -112,6 +113,10 @@ export default function UploadPage() {
           }
      };
 
+     const openFileDialog = () => {
+          fileInputRef.current?.click();
+     };
+
      const extractTextFromPDF = async (pdfFile: File): Promise<string> => {
           return new Promise((resolve, reject) => {
                const reader = new FileReader();
@@ -138,10 +143,17 @@ export default function UploadPage() {
                                         const pageText = textContent.items
                                              .map((item: any) => item.str)
                                              .join(' ');
-                                        fullText += pageText + '\n\n';
+
+                                        // Clean up extra whitespace while preserving paragraphs
+                                        const cleanText = pageText
+                                             .replace(/\s+/g, ' ')
+                                             .trim();
+
+                                        if (cleanText.length > 0) {
+                                             fullText += cleanText + '\n\n';
+                                        }
                                    } catch (pageErr) {
                                         console.warn(`Error extracting page ${pageNum}:`, pageErr);
-                                        fullText += `[Page ${pageNum} extraction failed]\n\n`;
                                    }
                               }
 
@@ -150,6 +162,8 @@ export default function UploadPage() {
                                    return;
                               }
 
+                              // Additional validation
+                              console.log(`Extracted ${fullText.length} characters from PDF`);
                               resolve(fullText);
                          } catch (workerErr: any) {
                               console.error('PDF worker error:', workerErr);
@@ -309,7 +323,7 @@ export default function UploadPage() {
      if (userLoading) {
           return (
                <div className="flex items-center justify-center min-h-screen">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent-amber"></div>
+                    <div className="spinner-glass w-12 h-12"></div>
                </div>
           );
      }
@@ -317,10 +331,11 @@ export default function UploadPage() {
      return (
           <div className="min-h-screen bg-dark-bg">
                {/* Header */}
-               <header className="border-b border-dark-border sticky top-0 bg-dark-bg/95 backdrop-blur">
-                    <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                         <Link href="/dashboard" className="text-2xl font-bold text-gradient">
-                              RecallAI
+               <header className="glass-bg sticky top-0 z-50">
+                    <div className="max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
+                         <Link href="/dashboard" className="flex items-center gap-3">
+                              <div className="text-3xl">✨</div>
+                              <h1 className="text-2xl font-bold text-gradient">RecallAI</h1>
                          </Link>
                          <Link href="/dashboard" className="btn-secondary text-sm">
                               Back to Dashboard
@@ -334,7 +349,7 @@ export default function UploadPage() {
                          <div className="space-y-8">
                               {/* Step 1: Upload PDF */}
                               <div className="card-container">
-                                   <h2 className="text-2xl font-bold mb-6">Step 1: Upload PDF</h2>
+                                   <h2 className="text-2xl font-bold mb-6">Step 1: Upload Document</h2>
 
                                    <div
                                         ref={dragRef}
@@ -346,21 +361,25 @@ export default function UploadPage() {
                                              : 'border-dark-border hover:border-accent-amber/50'
                                              }`}
                                    >
+                                        <input
+                                             ref={fileInputRef}
+                                             type="file"
+                                             accept=".pdf"
+                                             onChange={handleFileSelect}
+                                             className="hidden"
+                                        />
                                         <div className="text-5xl mb-4">📄</div>
                                         <h3 className="text-xl font-semibold mb-2">
                                              Drag & drop your PDF here
                                         </h3>
-                                        <p className="text-gray-400 mb-4">or click to select a file</p>
-                                        <input
-                                             type="file"
-                                             accept=".pdf"
-                                             onChange={handleFileSelect}
-                                             className="absolute opacity-0"
-                                             id="pdf-input"
-                                        />
-                                        <label htmlFor="pdf-input" className="btn-primary cursor-pointer">
-                                             Choose PDF
-                                        </label>
+                                        <p className="text-gray-400 mb-6">or click the button below to select</p>
+                                        <button
+                                             onClick={openFileDialog}
+                                             type="button"
+                                             className="btn-primary"
+                                        >
+                                             Choose Document
+                                        </button>
                                    </div>
 
                                    {file && (
