@@ -45,7 +45,6 @@ export default function Dashboard() {
                <header className="glass-bg sticky top-0 z-50 border-b border-white/5">
                     <div className="max-w-7xl mx-auto px-4 py-8 flex items-center justify-between">
                          <div className="flex items-center gap-4">
-                              <div className="text-4xl animate-float">✨</div>
                               <div>
                                    <h1 className="text-4xl font-bold text-gradient">RecallAI</h1>
                                    <p className="text-xs text-gray-400 mt-1">Master anything with AI</p>

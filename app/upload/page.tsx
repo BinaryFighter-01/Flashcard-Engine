@@ -312,7 +312,6 @@ export default function UploadPage() {
                <header className="glass-bg sticky top-0 z-50 border-b border-white/5">
                     <div className="max-w-5xl mx-auto px-4 py-8 flex items-center justify-between">
                          <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                              <div className="text-4xl animate-float">✨</div>
                               <h1 className="text-3xl font-bold text-gradient">RecallAI</h1>
                          </Link>
                          <Link href="/dashboard" className="btn-secondary text-sm font-semibold">
