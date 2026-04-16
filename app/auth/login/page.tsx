@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/app/lib/supabase-client';
 import Link from 'next/link';
 
@@ -15,6 +15,8 @@ export default function Login() {
      const [showResendEmail, setShowResendEmail] = useState(false);
      const [resendLoading, setResendLoading] = useState(false);
      const router = useRouter();
+     const searchParams = useSearchParams();
+     const redirectTo = searchParams.get('redirect') || '/dashboard';
      const supabase = createClient();
 
      useEffect(() => {
@@ -89,7 +91,7 @@ export default function Login() {
 
                setEmail('');
                setPassword('');
-               router.push('/dashboard');
+               router.push(redirectTo);
           } catch (err: any) {
                console.error('Login error:', err);
           } finally {

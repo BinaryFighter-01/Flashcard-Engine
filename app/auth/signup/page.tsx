@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/app/lib/supabase-client';
 import Link from 'next/link';
 
@@ -14,6 +14,8 @@ export default function SignUp() {
      const [error, setError] = useState('');
      const [success, setSuccess] = useState('');
      const router = useRouter();
+     const searchParams = useSearchParams();
+     const redirectTo = searchParams.get('redirect') || '/dashboard';
      const supabase = createClient();
 
      useEffect(() => {
@@ -86,7 +88,7 @@ export default function SignUp() {
 
                // Auto-redirect after 4 seconds (increased time for user to read the message)
                setTimeout(() => {
-                    router.push('/auth/login');
+                    router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`);
                }, 4000);
           } catch (err: any) {
                setError(err.message || 'An error occurred during sign up');
