@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/app/lib/supabase-client';
 import { Card, CardProgress } from '@/app/types/database';
-import { calculateNextReview, getCardsDueToday } from '@/app/lib/spaced-repetition';
+import { getCardsDueToday } from '@/app/lib/spaced-repetition';
 import confetti from 'canvas-confetti';
 
 interface CardWithProgress extends Card {
@@ -21,7 +21,6 @@ export default function StudyPage() {
      const queryMode = searchParams?.get('mode') || 'full';
      const studyMode: StudyMode = queryMode === 'quick' ? 'quick' : 'full';
 
-     const [user, setUser] = useState<any>(null);
      const [cards, setCards] = useState<CardWithProgress[]>([]);
      const [currentCardIndex, setCurrentCardIndex] = useState(0);
      const [isFlipped, setIsFlipped] = useState(false);
@@ -54,8 +53,6 @@ export default function StudyPage() {
                          return;
                     }
 
-                    setUser(currentUser);
-
                     // Fetch all cards for this deck
                     const { data: cardsData, error: cardsError } = await supabase
                          .from('cards')
@@ -86,8 +83,8 @@ export default function StudyPage() {
                          let filteredCards = cardsWithProgress;
                          if (studyMode === 'quick') {
                               filteredCards = getCardsDueToday(
-                                   cardsWithProgress.map((c) => c.progress).filter(Boolean)
-                              ).map((progress) =>
+                                   cardsWithProgress.map((c) => c.progress).filter(Boolean) as any
+                              ).map((progress: any) =>
                                    cardsWithProgress.find((c) => c.id === progress.card_id)
                               ).filter(Boolean) as CardWithProgress[];
                          }

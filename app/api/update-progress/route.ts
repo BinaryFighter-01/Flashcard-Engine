@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
 
           // If no progress exists, create initial entry
           if (!currentProgress) {
+               const now = new Date();
                const initialProgress = {
                     id: crypto.randomUUID(),
                     card_id: cardId,
@@ -56,8 +57,8 @@ export async function POST(request: NextRequest) {
                     ease_factor: 2.5,
                     interval: 1,
                     repetitions: 0,
-                    next_review_date: new Date().toISOString(),
-                    last_reviewed_at: new Date().toISOString(),
+                    next_review_date: now,
+                    last_reviewed_at: now,
                     total_reviews: 0,
                     correct_reviews: 0,
                     last_response_quality: quality,

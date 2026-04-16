@@ -249,11 +249,11 @@ Answer with ONLY this: [{"front":"q","back":"a","hint":"h","card_type":"concept"
                try {
                     const sentences = pdfText
                          .split(/[.!?]+/)
-                         .filter(s => s.trim().length > 20)
+                         .filter((s: string) => s.trim().length > 20)
                          .slice(0, 10);
 
                     if (sentences.length > 0) {
-                         sentences.forEach((sentence, idx) => {
+                         sentences.forEach((sentence: string, idx: number) => {
                               const text = sentence.trim();
                               if (text.length > 0) {
                                    allCards.push({

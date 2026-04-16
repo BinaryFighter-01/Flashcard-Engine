@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/app/lib/supabase-client';
-import PDFParser from 'pdf-parse';
 import * as pdfjs from 'pdfjs-dist';
 
 interface GeneratedCard {
@@ -36,7 +35,6 @@ export default function UploadPage() {
      const dragRef = useRef<HTMLDivElement>(null);
 
      // Check if user is logged in
-     const [user, setUser] = useState<any>(null);
      const [userLoading, setUserLoading] = useState(true);
      const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +51,6 @@ export default function UploadPage() {
                               router.push('/auth/login');
                               return;
                          }
-                         setUser(user);
                     }
                } catch (err) {
                     if (isMounted) {

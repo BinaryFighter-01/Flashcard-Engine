@@ -80,11 +80,16 @@ export default function DeckDetail() {
                          // Calculate stats
                          const progressArray = cardsWithProgress
                               .map((c) => c.progress)
-                              .filter(Boolean);
+                              .filter(Boolean)
+                              .map((p: any) => ({
+                                   ...p,
+                                   next_review_date: typeof p.next_review_date === 'string' ? new Date(p.next_review_date) : p.next_review_date,
+                                   last_reviewed_at: typeof p.last_reviewed_at === 'string' ? new Date(p.last_reviewed_at) : p.last_reviewed_at,
+                              }));
 
                          if (progressArray.length > 0) {
-                              const mastery = calculateMastery(progressArray as CardProgress[]);
-                              const cardsDue = getCardsDueToday(progressArray as CardProgress[]).length;
+                              const mastery = calculateMastery(progressArray as any);
+                              const cardsDue = getCardsDueToday(progressArray as any).length;
                               const totalReviews = progressArray.reduce((sum, p: any) => sum + (p?.total_reviews || 0), 0);
                               const correctReviews = progressArray.reduce((sum, p: any) => sum + (p?.correct_reviews || 0), 0);
 

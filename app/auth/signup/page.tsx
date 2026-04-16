@@ -13,7 +13,6 @@ export default function SignUp() {
      const [authChecking, setAuthChecking] = useState(true);
      const [error, setError] = useState('');
      const [success, setSuccess] = useState('');
-     const [user, setUser] = useState<any>(null);
      const router = useRouter();
      const supabase = createClient();
 
@@ -71,7 +70,7 @@ export default function SignUp() {
           }
 
           try {
-               const { data, error } = await supabase.auth.signUp({
+               const { error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -84,7 +83,6 @@ export default function SignUp() {
                setSuccess('Check your email to confirm your account and log in!');
                setEmail('');
                setPassword('');
-               setUser(data.user);
 
                // Auto-redirect after 4 seconds (increased time for user to read the message)
                setTimeout(() => {
