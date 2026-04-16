@@ -41,53 +41,73 @@ export default function Dashboard() {
 
      return (
           <div className="min-h-screen bg-dark-bg">
-               {/* Header */}
-               <header className="glass-bg sticky top-0 z-50">
-                    <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between">
-                         <div className="flex items-center gap-3">
-                              <div className="text-3xl">✨</div>
+               {/* Premium Header */}
+               <header className="glass-bg sticky top-0 z-50 border-b border-white/5">
+                    <div className="max-w-7xl mx-auto px-4 py-8 flex items-center justify-between">
+                         <div className="flex items-center gap-4">
+                              <div className="text-4xl animate-float">✨</div>
                               <div>
-                                   <h1 className="text-2xl font-bold text-gradient">RecallAI</h1>
+                                   <h1 className="text-4xl font-bold text-gradient">RecallAI</h1>
+                                   <p className="text-xs text-gray-400 mt-1">Master anything with AI</p>
                               </div>
                          </div>
-                         <div className="flex gap-3 items-center">
-                              <Link href="/upload" className="btn-primary text-sm">
-                                   + Create Deck
+                         <div className="flex gap-4 items-center">
+                              <Link href="/upload" className="btn-primary text-sm font-semibold">
+                                   ➕ New Deck
                               </Link>
                          </div>
                     </div>
                </header>
 
                {/* Main Content */}
-               <main className="max-w-7xl mx-auto px-4 py-12">
-                    {/* Quick Stats */}
-                    <div className="grid md:grid-cols-4 gap-4 mb-12">
-                         <div className="card-container">
-                              <div className="text-3xl font-bold text-accent-amber">{decks.length}</div>
-                              <p className="text-sm text-gray-400">Total Decks</p>
+               <main className="max-w-7xl mx-auto px-4 py-16">
+                    {/* Premium Stats Grid */}
+                    <div className="grid md:grid-cols-4 gap-5 mb-16">
+                         <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
+                              <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent-amber to-yellow-400 mb-2">
+                                   {decks.length}
+                              </div>
+                              <p className="text-sm text-gray-400 font-medium">Total Decks</p>
+                              <div className="mt-3 h-1 w-12 bg-gradient-to-r from-accent-amber to-yellow-400 rounded-full"></div>
                          </div>
-                         <div className="card-container">
-                              <div className="text-3xl font-bold text-accent-amber">0</div>
-                              <p className="text-sm text-gray-400">Cards Due Today</p>
+                         
+                         <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
+                              <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-accent-indigo to-blue-400 mb-2">
+                                   0
+                              </div>
+                              <p className="text-sm text-gray-400 font-medium">Due Today</p>
+                              <div className="mt-3 h-1 w-12 bg-gradient-to-r from-accent-indigo to-blue-400 rounded-full"></div>
                          </div>
-                         <div className="card-container">
-                              <div className="text-3xl font-bold text-accent-amber">0</div>
-                              <p className="text-sm text-gray-400">Study Streak</p>
+                         
+                         <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
+                              <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-pink-400 mb-2">
+                                   0
+                              </div>
+                              <p className="text-sm text-gray-400 font-medium">Study Streak</p>
+                              <div className="mt-3 h-1 w-12 bg-gradient-to-r from-rose-400 to-pink-400 rounded-full"></div>
                          </div>
-                         <div className="card-container">
-                              <div className="text-3xl font-bold text-accent-amber">0%</div>
-                              <p className="text-sm text-gray-400">Average Mastery</p>
+                         
+                         <div className="card-container-hover glass-bg p-8 rounded-2xl hover:scale-105 transition-all">
+                              <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-400 mb-2">
+                                   0%
+                              </div>
+                              <p className="text-sm text-gray-400 font-medium">Mastery</p>
+                              <div className="mt-3 h-1 w-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-full"></div>
                          </div>
                     </div>
 
                     {/* Decks Section */}
                     <div>
-                         <h2 className="text-2xl font-bold mb-6">Your Decks</h2>
+                         <div className="mb-10">
+                              <h2 className="text-3xl font-bold mb-2">Your Decks</h2>
+                              <p className="text-gray-400">Create, study, and master your subjects</p>
+                         </div>
 
                          {decks.length === 0 ? (
-                              <div className="card-container text-center py-12">
-                                   <p className="text-gray-400 mb-6">No decks yet. Create your first deck to get started!</p>
-                                   <Link href="/upload" className="btn-primary">
+                              <div className="glass-bg rounded-2xl p-16 text-center border-2 border-dashed border-white/10">
+                                   <div className="text-6xl mb-4">📚</div>
+                                   <p className="text-lg text-gray-400 mb-8">No decks yet. Start your learning journey!</p>
+                                   <Link href="/upload" className="btn-primary inline-block">
                                         Create Your First Deck
                                    </Link>
                               </div>
@@ -97,14 +117,21 @@ export default function Dashboard() {
                                         <Link
                                              key={deck.id}
                                              href={`/deck/${deck.id}`}
-                                             className="card-container cursor-pointer group"
+                                             className="group glass-bg rounded-2xl p-6 cursor-pointer hover:scale-105 transition-all duration-300"
                                         >
-                                             <div className={`w-full h-32 rounded-lg bg-gradient-to-br from-${deck.color_tag}-500 to-${deck.color_tag}-700 mb-4 group-hover:scale-105 transition-transform`}></div>
-                                             <h3 className="font-bold text-lg mb-2 group-hover:text-accent-amber transition-colors">
+                                             <div className="w-full h-40 rounded-xl bg-gradient-to-br from-accent-amber/30 via-accent-indigo/20 to-purple-900/30 mb-6 group-hover:shadow-lg group-hover:shadow-accent-amber/20 transition-all flex items-center justify-center">
+                                                  <div className="text-5xl">📖</div>
+                                             </div>
+                                             <h3 className="font-bold text-xl mb-2 group-hover:text-accent-amber transition-colors">
                                                   {deck.title}
                                              </h3>
-                                             <p className="text-sm text-gray-400 mb-4">{deck.description}</p>
-                                             <p className="text-xs text-accent-amber">{deck.card_count} cards</p>
+                                             <p className="text-sm text-gray-400 mb-4 line-clamp-2">{deck.description}</p>
+                                             <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                                                  <span className="text-xs text-accent-amber font-semibold">
+                                                       {deck.card_count || 0} cards
+                                                  </span>
+                                                  <div className="text-lg opacity-0 group-hover:opacity-100 transition-opacity">→</div>
+                                             </div>
                                         </Link>
                                    ))}
                               </div>

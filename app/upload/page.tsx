@@ -308,35 +308,40 @@ export default function UploadPage() {
 
      return (
           <div className="min-h-screen bg-dark-bg">
-               {/* Header */}
-               <header className="glass-bg sticky top-0 z-50">
-                    <div className="max-w-4xl mx-auto px-4 py-6 flex items-center justify-between">
-                         <Link href="/dashboard" className="flex items-center gap-3">
-                              <div className="text-3xl">✨</div>
-                              <h1 className="text-2xl font-bold text-gradient">RecallAI</h1>
+               {/* Premium Header */}
+               <header className="glass-bg sticky top-0 z-50 border-b border-white/5">
+                    <div className="max-w-5xl mx-auto px-4 py-8 flex items-center justify-between">
+                         <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                              <div className="text-4xl animate-float">✨</div>
+                              <h1 className="text-3xl font-bold text-gradient">RecallAI</h1>
                          </Link>
-                         <Link href="/dashboard" className="btn-secondary text-sm">
-                              Back to Dashboard
+                         <Link href="/dashboard" className="btn-secondary text-sm font-semibold">
+                              ← Back
                          </Link>
                     </div>
                </header>
 
                {/* Main Content */}
-               <main className="max-w-4xl mx-auto px-4 py-12">
+               <main className="max-w-5xl mx-auto px-4 py-16">
                     {cards.length === 0 ? (
                          <div className="space-y-8">
-                              {/* Step 1: Upload PDF */}
-                              <div className="card-container">
-                                   <h2 className="text-2xl font-bold mb-6">Step 1: Upload Document</h2>
+                              {/* Step 1: Upload PDF - Premium Design */}
+                              <div className="glass-bg rounded-2xl p-8">
+                                   <div className="flex items-center gap-3 mb-8">
+                                        <div className="w-10 h-10 rounded-lg glass-bg flex items-center justify-center font-bold text-accent-amber">
+                                             1
+                                        </div>
+                                        <h2 className="text-2xl font-bold">Upload Your Document</h2>
+                                   </div>
 
                                    <div
                                         ref={dragRef}
                                         onDragOver={handleDragOver}
                                         onDragLeave={handleDragLeave}
                                         onDrop={handleDrop}
-                                        className={`border-2 border-dashed rounded-lg p-12 text-center transition-all cursor-pointer ${isDragging
-                                             ? 'border-accent-amber bg-accent-amber/5'
-                                             : 'border-dark-border hover:border-accent-amber/50'
+                                        className={`relative rounded-2xl p-16 text-center transition-all cursor-pointer border-2 ${isDragging
+                                             ? 'border-accent-amber bg-accent-amber/10 shadow-lg shadow-accent-amber/20'
+                                             : 'border-dashed border-white/20 hover:border-accent-amber/50'
                                              }`}
                                    >
                                         <input
@@ -346,55 +351,64 @@ export default function UploadPage() {
                                              onChange={handleFileSelect}
                                              className="hidden"
                                         />
-                                        <div className="text-5xl mb-4">📄</div>
-                                        <h3 className="text-xl font-semibold mb-2">
-                                             Drag & drop your PDF here
+                                        <div className="text-6xl mb-6 animate-float">📄</div>
+                                        <h3 className="text-2xl font-semibold mb-3">
+                                             Drop your PDF here
                                         </h3>
-                                        <p className="text-gray-400 mb-6">or click the button below to select</p>
+                                        <p className="text-gray-400 mb-8 text-lg">or click to browse your computer</p>
                                         <button
                                              onClick={openFileDialog}
                                              type="button"
-                                             className="btn-primary"
+                                             className="btn-primary font-semibold"
                                         >
                                              Choose Document
                                         </button>
                                    </div>
 
                                    {file && (
-                                        <div className="mt-4 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                             <p className="text-green-400">✓ File selected: {file.name}</p>
+                                        <div className="mt-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-3">
+                                             <span className="text-2xl">✓</span>
+                                             <div>
+                                                  <p className="text-emerald-400 font-semibold">{file.name}</p>
+                                                  <p className="text-xs text-emerald-300">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                             </div>
                                         </div>
                                    )}
                               </div>
 
-                              {/* Step 2: Deck Details */}
-                              <div className="card-container">
-                                   <h2 className="text-2xl font-bold mb-6">Step 2: Deck Details</h2>
+                              {/* Step 2: Deck Details - Premium Design */}
+                              <div className="glass-bg rounded-2xl p-8">
+                                   <div className="flex items-center gap-3 mb-8">
+                                        <div className="w-10 h-10 rounded-lg glass-bg flex items-center justify-center font-bold text-accent-amber">
+                                             2
+                                        </div>
+                                        <h2 className="text-2xl font-bold">Deck Details</h2>
+                                   </div>
 
-                                   <div className="space-y-4">
+                                   <div className="space-y-6">
                                         <div>
-                                             <label className="block text-sm font-medium mb-2">
-                                                  Deck Title *
+                                             <label className="block text-sm font-semibold mb-3 text-gray-200">
+                                                  Deck Title <span className="text-red-400">*</span>
                                              </label>
                                              <input
                                                   type="text"
                                                   value={deckTitle}
                                                   onChange={(e) => setDeckTitle(e.target.value)}
                                                   placeholder="e.g., Biology 101, Spanish Vocab"
-                                                  className="input-primary"
+                                                  className="w-full glass-bg py-3 px-4 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-accent-amber/50 transition-all border border-white/5"
                                              />
                                         </div>
 
                                         <div>
-                                             <label className="block text-sm font-medium mb-2">
-                                                  Description (optional)
+                                             <label className="block text-sm font-semibold mb-3 text-gray-200">
+                                                  Description
                                              </label>
                                              <textarea
                                                   value={deckDescription}
                                                   onChange={(e) => setDeckDescription(e.target.value)}
                                                   placeholder="Add a description for your deck..."
                                                   rows={3}
-                                                  className="input-primary"
+                                                  className="w-full glass-bg py-3 px-4 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-accent-amber/50 transition-all border border-white/5"
                                              />
                                         </div>
                                    </div>
@@ -402,8 +416,9 @@ export default function UploadPage() {
 
                               {/* Error Display */}
                               {error && (
-                                   <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 text-red-300">
-                                        {error}
+                                   <div className="glass-bg border border-red-500/30 bg-red-500/10 rounded-xl p-4 text-red-300 flex items-center gap-3">
+                                        <span className="text-2xl">⚠️</span>
+                                        <span>{error}</span>
                                    </div>
                               )}
 
@@ -411,42 +426,52 @@ export default function UploadPage() {
                               <button
                                    onClick={handleGenerateCards}
                                    disabled={!file || !deckTitle.trim() || loading}
-                                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-lg py-3"
+                                   className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-lg font-semibold py-4 rounded-xl"
                               >
-                                   {loading ? 'Generating...' : 'Generate Flashcards'}
+                                   {loading ? (
+                                        <span className="flex items-center justify-center gap-2">
+                                             <div className="spinner-glass w-5 h-5"></div>
+                                             Generating...
+                                        </span>
+                                   ) : (
+                                        '✨ Generate Flashcards'
+                                   )}
                               </button>
 
                               {/* Generation Progress */}
                               {generating && (
-                                   <div className="card-container">
-                                        <p className="text-sm text-gray-400 mb-3">{generationStatus}</p>
-                                        <div className="w-full bg-dark-border rounded-full h-2 overflow-hidden">
+                                   <div className="glass-bg rounded-2xl p-6">
+                                        <p className="text-sm text-gray-300 font-medium mb-4">{generationStatus}</p>
+                                        <div className="w-full bg-dark-surface/50 rounded-full h-3 overflow-hidden">
                                              <div
-                                                  className="bg-gradient-to-r from-accent-amber to-accent-indigo h-full transition-all duration-300"
+                                                  className="bg-gradient-to-r from-accent-amber via-accent-indigo to-accent-amber h-full transition-all duration-300"
                                                   style={{ width: `${generationProgress}%` }}
                                              ></div>
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-3">{generationProgress}%</p>
+                                        <div className="flex justify-between mt-4">
+                                             <p className="text-xs text-gray-400">{generationProgress}% complete</p>
+                                             <p className="text-xs text-gray-400">This may take a minute...</p>
+                                        </div>
                                    </div>
                               )}
                          </div>
                     ) : (
                          <div className="space-y-8">
                               {/* Card Preview & Editing */}
-                              <div className="card-container">
-                                   <div className="flex items-center justify-between mb-6">
+                              <div className="glass-bg rounded-2xl p-8">
+                                   <div className="flex items-center justify-between mb-8">
                                         <h2 className="text-2xl font-bold">
-                                             Generated Cards ({cards.length})
+                                             ✨ Generated {cards.length} Card{cards.length !== 1 ? 's' : ''}
                                         </h2>
                                         <button
                                              onClick={() => setCards([])}
-                                             className="btn-secondary text-sm"
+                                             className="btn-secondary text-sm font-semibold"
                                         >
                                              ← Start Over
                                         </button>
                                    </div>
 
-                                   <div className="space-y-4 max-h-96 overflow-y-auto">
+                                   <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
                                         {cards.map((card, index) => (
                                              <div
                                                   key={index}
