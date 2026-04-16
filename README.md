@@ -493,17 +493,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📧 Support & Contact
 
-- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
-- **Email**: your.email@example.com
-- **Discord**: [Join Community](https://discord.gg/your-invite)
+- **Issues**: [GitHub Issues](https://github.com/Flashcard-Engine/issues)
+- **Email**: anilabhange.in@gmail.com
+  
 
 ---
 
 ## 👨‍💻 Authors
 
 **Anil Abhange**
-- GitHub: [@anil-abhange](https://github.com/anil-abhange)
-- Email: your.email@example.com
+- GitHub: [@AnilAbhange](https://github.com/BinaryFighter-01)
+- Email: anilabhange.in@gmail.com
 
 ---
 
